@@ -1,14 +1,15 @@
 const express = require('express');
 const os = require('os');
-const requests = require('requests');
+const axios = require('axios'); // Remplacement par axios
 const genai = require('google.generativeai'); // Assurez-vous d'avoir installé la bonne bibliothèque
+const fs = require('fs');
 const tempfile = require('tempfile');
 const app = express();
 
 app.use(express.json());
 
 // Configurer l'API Gemini avec votre clé API
-genai.configure({ api_key: os.getenv("GEMINI_API_KEY") });
+genai.configure({ api_key: process.env["GEMINI_API_KEY"] });
 
 // Dictionnaire pour stocker les historiques de conversation
 const sessions = {};
@@ -30,10 +31,11 @@ const model = new genai.GenerativeModel({
 // Fonction pour télécharger une image depuis une URL
 async function download_image(url) {
     try {
-        const response = await requests.get(url, { responseType: 'stream' });
+        const response = await axios.get(url, { responseType: 'stream' });
         if (response.status === 200) {
             const tempFile = tempfile('.jpg');
-            const writer = response.data.pipe(fs.createWriteStream(tempFile));
+            const writer = fs.createWriteStream(tempFile);
+            response.data.pipe(writer);
             return new Promise((resolve, reject) => {
                 writer.on('finish', () => resolve(tempFile));
                 writer.on('error', reject);
@@ -60,8 +62,8 @@ async function upload_to_gemini(path, mime_type = null) {
 
 // Déclaration de l'API avec exports.config et exports.initialize
 exports.config = {
-    name: 'gemini-chat-api',
-    author: 'Bruno',
+    name: 'gemini-chat',
+    author: '',
     description: 'API pour gérer des sessions de chat avec Gemini AI',
     category: 'ai',
     usage: ['/api/gemini']
